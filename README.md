@@ -11,13 +11,34 @@ The approved product scope, architecture, engineering trade-offs, and AI-assiste
 - [Engineering decisions](docs/decisions.md)
 - [AI usage record](docs/ai-usage.md)
 
-## Planned local workflow
+## Backend setup
 
-Implementation will provide documented commands to:
+From the repository root, create an isolated environment and install the API with its test tools:
 
-1. Start the API, UI, and database.
-2. Run database migrations and generate 10,000 fictional employees.
-3. Run backend, frontend, and end-to-end tests.
-4. Build and deploy a demo environment.
+```bash
+python3 -m venv backend/.venv
+backend/.venv/bin/python -m pip install -e 'backend[dev]'
+cd backend
+```
 
-Detailed setup instructions will be added alongside the runnable application.
+Create the database schema and seed it with deterministic fictional data:
+
+```bash
+.venv/bin/alembic upgrade head
+.venv/bin/python -m scripts.seed --employee-count 10000
+```
+
+Run the API locally at `http://127.0.0.1:8000`; interactive OpenAPI documentation is at `/docs`.
+
+```bash
+.venv/bin/uvicorn app.main:app --reload
+```
+
+Run the backend quality checks:
+
+```bash
+.venv/bin/python -m ruff check .
+.venv/bin/python -m pytest
+```
+
+The frontend, containers, CI, deployment instructions, and demo video will be added in later phases.
