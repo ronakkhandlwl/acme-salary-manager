@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Node / frontend
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+
+# Environment and databases
+.env
+.env.*
+!.env.example
+*.db
+*.sqlite
+*.sqlite3
+
+# OS and editors
+.DS_Store
+.idea/
+.vscode/
