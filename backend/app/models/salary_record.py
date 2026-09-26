@@ -17,6 +17,14 @@ class SalaryRecord(Base):
     __tablename__ = "salary_records"
     __table_args__ = (
         Index("ix_salary_records_employee_effective_from", "employee_id", "effective_from"),
+        Index("ix_salary_records_currency", "currency"),
+        Index("ix_salary_records_created_at", "created_at"),
+        Index(
+            "ix_salary_records_employee_effective_created",
+            "employee_id",
+            "effective_from",
+            "created_at",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))

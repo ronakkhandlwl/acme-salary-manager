@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.models.employee import Employee
 from app.models.salary_record import SalaryRecord
 from app.schemas.employees import EmployeeCreate, SalaryRecordCreate
+from app.services.query_filters import employee_filter_clauses
 
 
 class DuplicateEmployeeError(Exception):
@@ -49,7 +50,11 @@ def list_employees(
     statement: Select[tuple[Employee]] = select(Employee).options(
         selectinload(Employee.salary_records)
     )
-    filters = []
+    filters = employee_filter_clauses(
+        country_code=country_code,
+        department=department,
+        employment_status=employment_status,
+    )
     if search:
         pattern = f"%{search.strip().lower()}%"
         filters.append(
@@ -60,12 +65,6 @@ def list_employees(
                 func.lower(Employee.employee_number).like(pattern),
             )
         )
-    if country_code:
-        filters.append(Employee.country_code == country_code.upper())
-    if department:
-        filters.append(Employee.department == department)
-    if employment_status:
-        filters.append(Employee.employment_status == employment_status)
     if filters:
         statement = statement.where(*filters)
 

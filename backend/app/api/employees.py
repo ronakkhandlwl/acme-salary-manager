@@ -1,9 +1,9 @@
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy.orm import Session, sessionmaker
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session
 
-from app.db.session import get_session
+from app.api.deps import request_session
 from app.schemas.employees import (
     EmployeeCreate,
     EmployeeDetail,
@@ -22,13 +22,6 @@ from app.services.employees import (
 )
 
 router = APIRouter(prefix="/api/v1/employees", tags=["employees"])
-
-
-def request_session(request: Request):
-    factory: sessionmaker[Session] = request.app.state.session_factory
-    yield from get_session(factory)
-
-
 SessionDependency = Annotated[Session, Depends(request_session)]
 
 
