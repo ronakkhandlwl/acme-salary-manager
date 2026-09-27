@@ -9,22 +9,22 @@ pay people?" with per-currency analytics.
 
 | Dashboard | Profile & salary change |
 |---|---|
-| Headcount, payroll, median and average **per currency**; pay by department, salary distribution, top/bottom earners, pay by country, recent changes — filterable by country, department and status | Current pay, append-only history with change %, scheduled raises, validated salary changes with a before/after preview |
+| Headcount, payroll, median and average **per currency**; pay by department, salary distribution, top/bottom earners, pay by country, recent changes, filterable by country, department and status | Current pay, append-only history with change %, scheduled raises, validated salary changes with a before/after preview |
 
 ## What's in V1
 
-- **Directory** — server-side search (name, email, employee number), filters, sorting and
+- **Directory**: server-side search (name, email, employee number), filters, sorting and
   pagination over 10,000 employees; filters live in the URL.
-- **Profile** — current salary (annualized) and full salary history; history is never
+- **Profile**: current salary (annualized) and full salary history; history is never
   overwritten, corrections are new records.
-- **Salary changes** — amount, currency, pay frequency, effective date (up to a year ahead),
+- **Salary changes**: amount, currency, pay frequency, effective date (up to a year ahead),
   reason; validated in the browser and again by the API.
-- **New hires** — employee and starting salary created in one atomic request.
-- **Analytics** — computed in SQL for the current filters; money is never summed across
+- **New hires**: employee and starting salary created in one atomic request.
+- **Analytics**: computed in SQL for the current filters; money is never summed across
   currencies.
 
 Deliberately out of scope (payroll, tax, benefits, FX conversion, bulk import, approvals,
-SSO/RBAC, AI chat) — reasons in the [requirements](requirements/product-requirements.md).
+SSO/RBAC, AI chat); reasons in the [requirements](requirements/product-requirements.md).
 
 ## Stack
 
@@ -34,7 +34,7 @@ Docker · GitHub Actions
 
 ## Run it
 
-### Option A — Docker (production-like, PostgreSQL)
+### Option A: Docker (production-like, PostgreSQL)
 
 ```bash
 docker compose up --build
@@ -42,7 +42,7 @@ docker compose up --build
 
 Open http://localhost:8000. The first boot migrates and seeds 10,000 fictional employees.
 
-### Option B — local development
+### Option B: local development
 
 Prerequisites: Python 3.12+, Node 22+.
 
@@ -99,11 +99,11 @@ scripts/                               container entrypoint, E2E server
   arithmetic, never floats.
 - **Salary is history**, not a column: the current salary is derived by effective date,
   so nothing is ever lost.
-- **Per-currency analytics** only — a global total needs an FX policy V1 does not have.
-- **Curated analytics over an AI chatbot** — exact, explainable answers for sensitive data.
-- **SQL does the work** — the browser never receives 10,000 rows; the analytics summary
+- **Per-currency analytics** only: a global total needs an FX policy V1 does not have.
+- **Curated analytics over an AI chatbot**: exact, explainable answers for sensitive data.
+- **SQL does the work**: the browser never receives 10,000 rows; the analytics summary
   takes ~70 ms on PostgreSQL after measured optimizations.
-- **Tested on both databases** — PostgreSQL runs caught bugs SQLite hid.
+- **Tested on both databases**: PostgreSQL runs caught bugs SQLite hid.
 
 See [docs/decisions.md](docs/decisions.md) for the full list.
 

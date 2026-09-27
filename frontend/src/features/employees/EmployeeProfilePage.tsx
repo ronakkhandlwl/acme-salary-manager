@@ -89,10 +89,10 @@ function SalaryHistoryTable({ employee }: { employee: EmployeeDetail }) {
               <TableCell>{PAY_FREQUENCY_LABELS[record.pay_frequency]}</TableCell>
               <TableCell align="right">{formatMoney(annualMinor, record.currency)}</TableCell>
               <TableCell align="right" sx={{ color: changePercent !== null && changePercent < 0 ? 'error.main' : undefined }}>
-                {changePercent === null ? '—' : `${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(1)}%`}
+                {changePercent === null ? '-' : `${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(1)}%`}
               </TableCell>
               <TableCell>{CHANGE_REASON_LABELS[record.change_reason] ?? record.change_reason}</TableCell>
-              <TableCell>{record.created_at ? formatDate(record.created_at) : '—'}</TableCell>
+              <TableCell>{record.created_at ? formatDate(record.created_at) : '-'}</TableCell>
             </TableRow>
           ))}
         </TableBody>

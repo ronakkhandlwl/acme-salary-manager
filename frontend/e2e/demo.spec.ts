@@ -23,8 +23,8 @@ async function caption(page: Page, text: string, holdMs = 2500) {
 test('ACME Salary Manager walkthrough', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByTestId('headcount')).toBeVisible()
-  await caption(page, 'ACME Salary Manager — replaces salary spreadsheets for 10,000 employees in 5 countries', 3500)
-  await caption(page, 'Dashboard: headcount, payroll, median and average pay — always per currency, never summed across currencies', 4000)
+  await caption(page, 'ACME Salary Manager replaces salary spreadsheets for 10,000 employees in 5 countries', 3500)
+  await caption(page, 'Dashboard: headcount, payroll, median and average pay, always per currency, never summed across currencies', 4000)
   await page.getByRole('button', { name: 'USD' }).click()
   await caption(page, 'Switch the detailed view between currencies: pay by department and salary distribution', 3500)
   await page.mouse.wheel(0, 700)
@@ -33,7 +33,7 @@ test('ACME Salary Manager walkthrough', async ({ page }) => {
 
   await page.getByRole('combobox', { name: 'Country' }).click()
   await page.getByRole('option', { name: 'India' }).click()
-  await caption(page, 'Filter by country, department or employment status — every figure is computed in the database', 3500)
+  await caption(page, 'Filter by country, department or employment status. Every figure is computed in the database', 3500)
 
   await page.getByRole('tab', { name: 'Employees' }).click()
   await caption(page, 'Employee directory: server-side search, filters, sorting and pagination', 3000)
@@ -53,7 +53,7 @@ test('ACME Salary Manager walkthrough', async ({ page }) => {
   await page.getByRole('option', { name: 'Promotion' }).click()
   await dialog.getByRole('button', { name: 'Save salary change' }).click()
   await expect(dialog).toBeHidden()
-  await caption(page, 'Saved as a new record — history is never overwritten', 3500)
+  await caption(page, 'Saved as a new record. History is never overwritten', 3500)
 
   await page.getByRole('tab', { name: 'Dashboard' }).click()
   await page.mouse.wheel(0, 1600)

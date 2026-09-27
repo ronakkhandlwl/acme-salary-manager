@@ -7,7 +7,7 @@ Short ADR-style records. Each states the choice, why, and what it costs.
 | # | Decision | Rationale | Consequence |
 |---|---|---|---|
 | P1 | Curated dashboard instead of a free-form AI chat | Compensation data is sensitive; answers must be exact, explainable and repeatable. A dashboard answers the common questions (headcount, payroll, median/average, distribution, extremes, recent changes) with no hallucination risk | Unanticipated questions need a new view; an NL layer could later sit *on top of* these audited endpoints |
-| P2 | Never sum across currencies | A global total needs an FX source, rate date and accounting policy — none exist in V1 | Dashboard shows one card per currency and charts one currency at a time |
+| P2 | Never sum across currencies | A global total needs an FX source, rate date and accounting policy, and none exist in V1 | Dashboard shows one card per currency and charts one currency at a time |
 | P3 | Salary history is append-only | HR needs an audit trail; spreadsheets lose it | Corrections are new records (reason `correction`); there is no edit/delete |
 | P4 | Allow future-dated salaries, max one year | Raises are often agreed before they take effect | "Current" is date-dependent; history labels scheduled entries |
 | P5 | No authentication in V1 | Single HR-admin evaluation flow on fictional data; half-built auth is worse than an explicit gap | Must add SSO/RBAC before real data (see requirements, out of scope) |

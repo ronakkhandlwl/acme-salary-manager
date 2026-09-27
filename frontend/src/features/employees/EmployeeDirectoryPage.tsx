@@ -37,7 +37,7 @@ const COLUMNS: { label: string; sortField?: SortField; align?: 'right' }[] = [
 
 function SalaryCell({ employee }: { employee: Employee }) {
   const salary = employee.current_salary
-  if (!salary) return <Typography color="text.secondary">—</Typography>
+  if (!salary) return <Typography color="text.secondary">-</Typography>
   return <>{formatMoney(annualize(salary.amount_minor, salary.pay_frequency), salary.currency)}</>
 }
 

@@ -24,7 +24,7 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
     {
-      // `npm run demo:record` — slowed-down, captioned walkthrough saved as video.
+      // `npm run demo:record`: slowed-down, captioned walkthrough saved as video.
       name: 'demo',
       testMatch: /demo\.spec\.ts/,
       timeout: 180_000,

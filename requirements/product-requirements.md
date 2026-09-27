@@ -1,4 +1,4 @@
-# ACME Salary Manager — Product Requirements
+# ACME Salary Manager: Product Requirements
 
 **Status:** Approved for V1  
 **Persona:** HR Manager supporting a 10,000-person, multi-country organization
