@@ -15,23 +15,6 @@ ChangeReason = Literal[
 ]
 
 
-class EmployeeCreate(BaseModel):
-    employee_number: str = Field(min_length=1, max_length=32)
-    first_name: str = Field(min_length=1, max_length=100)
-    last_name: str = Field(min_length=1, max_length=100)
-    email: EmailStr
-    country_code: str = Field(pattern=r"^[A-Za-z]{2}$")
-    department: str = Field(min_length=1, max_length=100)
-    title: str = Field(min_length=1, max_length=150)
-    employment_status: EmploymentStatus = "active"
-    hire_date: date
-
-    @field_validator("country_code")
-    @classmethod
-    def normalize_country_code(cls, value: str) -> str:
-        return value.upper()
-
-
 class SalaryRecordCreate(BaseModel):
     amount_minor: int = Field(gt=0)
     currency: str = Field(pattern=r"^[A-Za-z]{3}$")
@@ -42,6 +25,25 @@ class SalaryRecordCreate(BaseModel):
     @field_validator("currency")
     @classmethod
     def normalize_currency(cls, value: str) -> str:
+        return value.upper()
+
+
+class EmployeeCreate(BaseModel):
+    employee_number: str = Field(min_length=1, max_length=32)
+    first_name: str = Field(min_length=1, max_length=100)
+    last_name: str = Field(min_length=1, max_length=100)
+    email: EmailStr
+    country_code: str = Field(pattern=r"^[A-Za-z]{2}$")
+    department: str = Field(min_length=1, max_length=100)
+    title: str = Field(min_length=1, max_length=150)
+    employment_status: EmploymentStatus = "active"
+    hire_date: date
+    # Optional starting salary, stored in the same transaction as the employee.
+    initial_salary: SalaryRecordCreate | None = None
+
+    @field_validator("country_code")
+    @classmethod
+    def normalize_country_code(cls, value: str) -> str:
         return value.upper()
 
 

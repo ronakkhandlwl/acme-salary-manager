@@ -240,3 +240,24 @@ def test_sorts_directory_descending(client: TestClient, employee_payload: dict[s
     ).json()
 
     assert [item["employee_number"] for item in body["items"]] == ["EMP-00002", "EMP-00001"]
+
+
+def test_creates_employee_with_initial_salary_atomically(
+    client: TestClient, employee_payload: dict[str, str]
+) -> None:
+    salary = _salary_payload(change_reason="initial_offer", effective_from="2020-01-15")
+
+    employee = create_employee(client, {**employee_payload, "initial_salary": salary})
+
+    assert employee["current_salary"]["amount_minor"] == salary["amount_minor"]
+
+
+def test_invalid_initial_salary_creates_nothing(
+    client: TestClient, employee_payload: dict[str, str]
+) -> None:
+    salary = _salary_payload(effective_from="2019-01-01")  # before hire date
+
+    response = client.post("/api/v1/employees", json={**employee_payload, "initial_salary": salary})
+
+    assert response.status_code == 422
+    assert client.get("/api/v1/employees").json()["total"] == 0

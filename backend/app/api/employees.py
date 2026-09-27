@@ -48,6 +48,10 @@ def create_employee_endpoint(payload: EmployeeCreate, session: SessionDependency
         employee = create_employee(session, payload)
     except DuplicateEmployeeError as error:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+    except InvalidSalaryRecordError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(error)
+        ) from error
     return to_employee_read(employee)
 
 

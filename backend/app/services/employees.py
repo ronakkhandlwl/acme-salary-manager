@@ -21,8 +21,26 @@ class InvalidSalaryRecordError(Exception):
     """Raised when a salary record violates a compensation business rule."""
 
 
-def create_employee(session: Session, payload: EmployeeCreate) -> Employee:
-    employee = Employee(**payload.model_dump())
+def _check_effective_date(effective_from: date, hire_date: date, today: date | None) -> None:
+    reference_date = today or date.today()
+    if effective_from < hire_date:
+        raise InvalidSalaryRecordError(
+            "salary effective date cannot be before the employee hire date"
+        )
+    if effective_from > reference_date + timedelta(days=MAX_FUTURE_EFFECTIVE_DAYS):
+        raise InvalidSalaryRecordError(
+            "salary effective date cannot be more than one year in the future"
+        )
+
+
+def create_employee(
+    session: Session, payload: EmployeeCreate, *, today: date | None = None
+) -> Employee:
+    """Create an employee and, atomically, their optional starting salary."""
+    employee = Employee(**payload.model_dump(exclude={"initial_salary"}))
+    if payload.initial_salary is not None:
+        _check_effective_date(payload.initial_salary.effective_from, payload.hire_date, today)
+        employee.salary_records.append(SalaryRecord(**payload.initial_salary.model_dump()))
     session.add(employee)
     try:
         session.commit()
@@ -101,15 +119,7 @@ def add_salary_record(
     today: date | None = None,
 ) -> SalaryRecord:
     """Append a salary record; existing records are never modified."""
-    reference_date = today or date.today()
-    if payload.effective_from < employee.hire_date:
-        raise InvalidSalaryRecordError(
-            "salary effective date cannot be before the employee hire date"
-        )
-    if payload.effective_from > reference_date + timedelta(days=MAX_FUTURE_EFFECTIVE_DAYS):
-        raise InvalidSalaryRecordError(
-            "salary effective date cannot be more than one year in the future"
-        )
+    _check_effective_date(payload.effective_from, employee.hire_date, today)
     record = SalaryRecord(employee_id=employee.id, **payload.model_dump())
     session.add(record)
     session.commit()
