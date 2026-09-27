@@ -32,7 +32,7 @@ class CountryProfile:
     code: str
     currency: str
     weight: int
-    entry_salary: int  # Annual entry-level salary in major units.
+    entry_salary: int  # Today's annual entry-level salary in major units.
 
 
 COUNTRIES = (
@@ -73,9 +73,9 @@ LAST_NAMES = (
     "Schmidt", "Shah", "Singh", "Smith", "Tan", "Taylor", "Wagner", "Walker", "Wong", "Yadav",
 )  # fmt: skip
 EMPLOYMENT_STATUSES = (("active", 92), ("inactive", 5), ("terminated", 3))
-ANNUAL_RAISE_RANGE = (0.03, 0.09)
-PROMOTION_RAISE_RANGE = (0.12, 0.20)
-PROMOTION_PROBABILITY = 0.15
+ANNUAL_RAISE_RANGE = (0.02, 0.06)
+PROMOTION_RAISE_RANGE = (0.10, 0.15)
+PROMOTION_PROBABILITY = 0.08
 
 
 @dataclass(frozen=True)
@@ -101,26 +101,48 @@ def _round_to_hundred(amount: float) -> int:
     return int(round(amount / 100) * 100)
 
 
+def _review_dates(generator: random.Random, hire_date: date) -> list[date]:
+    """Hire date, then hire anniversaries every one or two years up to the reference date."""
+    dates = [hire_date]
+    while True:
+        following = dates[-1].replace(year=dates[-1].year + generator.choice((1, 1, 1, 2)))
+        if following > REFERENCE_DATE:
+            return dates
+        dates.append(following)
+
+
 def _salary_history(
-    generator: random.Random, employee_id: str, currency: str, hire_date: date, base: int
+    generator: random.Random,
+    employee_id: str,
+    currency: str,
+    hire_date: date,
+    current_salary: int,
 ) -> list[dict]:
-    """An initial offer, then a review or promotion every one or two years until today."""
+    """Work backwards from today's level-appropriate salary to an initial offer.
+
+    Deriving history from the current salary keeps today's pay realistic for each
+    level no matter how long someone has been employed.
+    """
+    dates = _review_dates(generator, hire_date)
+    reasons = ["initial_offer"]
+    multipliers = [1.0]
+    for _ in dates[1:]:
+        promoted = generator.random() < PROMOTION_PROBABILITY
+        reasons.append("promotion" if promoted else "annual_review")
+        raise_range = PROMOTION_RAISE_RANGE if promoted else ANNUAL_RAISE_RANGE
+        multipliers.append(1 + generator.uniform(*raise_range))
+    growth = 1.0
+    for multiplier in multipliers:
+        growth *= multiplier
+    amount = current_salary / growth
     records = []
-    amount = base
-    effective = hire_date
-    while effective <= REFERENCE_DATE:
-        if not records:
-            reason = "initial_offer"
-        else:
-            promoted = generator.random() < PROMOTION_PROBABILITY
-            reason = "promotion" if promoted else "annual_review"
-            raise_range = PROMOTION_RAISE_RANGE if promoted else ANNUAL_RAISE_RANGE
-            amount = _round_to_hundred(amount * (1 + generator.uniform(*raise_range)))
+    for effective, reason, multiplier in zip(dates, reasons, multipliers, strict=True):
+        amount *= multiplier
         records.append(
             {
                 "id": _uuid(generator),
                 "employee_id": employee_id,
-                "amount_minor": amount * 100,
+                "amount_minor": _round_to_hundred(amount) * 100,
                 "currency": currency,
                 "pay_frequency": "annual",
                 "effective_from": effective,
@@ -128,8 +150,6 @@ def _salary_history(
                 "created_at": datetime.combine(effective, time(9, 0), tzinfo=UTC),
             }
         )
-        # Review cycles land on the anniversary of hire, skipping an occasional year.
-        effective = effective.replace(year=effective.year + generator.choice((1, 1, 1, 2)))
     return records
 
 
@@ -168,14 +188,14 @@ def generate_dataset(
                 "hire_date": hire_date,
             }
         )
-        base_salary = _round_to_hundred(
+        current_salary = _round_to_hundred(
             country.entry_salary
             * level_multiplier
             * department_multiplier
             * generator.uniform(0.88, 1.12)
         )
         salary_records.extend(
-            _salary_history(generator, employee_id, country.currency, hire_date, base_salary)
+            _salary_history(generator, employee_id, country.currency, hire_date, current_salary)
         )
     return employees, salary_records
 

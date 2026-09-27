@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-TARGET_BAND_COUNT = 6
+TARGET_BAND_COUNT = 10
 # Band widths are one of these multiples of a power of ten (e.g. 20,000 or 250,000).
 NICE_STEP_MULTIPLIERS = (10, 20, 25, 50, 100)
 # Boundaries are rounded to at least whole major units (100 minor units).

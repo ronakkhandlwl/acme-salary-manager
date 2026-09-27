@@ -70,3 +70,21 @@ def test_seed_refuses_to_overwrite_existing_data_without_reset(seed_url: str) ->
 
     seed_database(seed_url, employee_count=20, random_seed=1, reset=True)
     assert _counts(seed_url)[0] == 20
+
+
+def test_salary_history_grows_to_a_level_appropriate_current_salary() -> None:
+    employees, records = generate_dataset(400, random_seed=5)
+    by_employee: dict[str, list[dict]] = {}
+    for record in records:
+        by_employee.setdefault(record["employee_id"], []).append(record)
+    usd_current = []
+    for employee in employees:
+        history = sorted(by_employee[employee["id"]], key=lambda r: r["effective_from"])
+        amounts = [record["amount_minor"] for record in history]
+        assert amounts == sorted(amounts), "seeded pay never decreases"
+        assert history[0]["change_reason"] == "initial_offer"
+        if history[-1]["currency"] == "USD":
+            usd_current.append(history[-1]["amount_minor"] // 100)
+
+    # Entry level $72k up to Director (4x) with department and personal variation.
+    assert 50_000 < min(usd_current) and max(usd_current) < 400_000
