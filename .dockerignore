@@ -1,0 +1,16 @@
+**/.git
+**/node_modules
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/.coverage
+**/*.db
+frontend/dist
+frontend/test-results
+frontend/playwright-report
+frontend/coverage
+docs
+requirements
+.claude
+.github

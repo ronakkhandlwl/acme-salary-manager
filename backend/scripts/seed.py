@@ -234,13 +234,19 @@ def seed_database(
     return SeedSummary(employee_count=len(employees), salary_record_count=len(salary_records))
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Seed fictional ACME salary data.")
     parser.add_argument("--database-url", default=None, help="defaults to DATABASE_URL setting")
     parser.add_argument("--employee-count", type=int, default=10_000)
     parser.add_argument("--random-seed", type=int, default=DEFAULT_RANDOM_SEED)
-    parser.add_argument("--reset", action="store_true", help="replace existing employees")
-    arguments = parser.parse_args()
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--reset", action="store_true", help="replace existing employees")
+    mode.add_argument(
+        "--if-empty",
+        action="store_true",
+        help="seed only a database with no employees; otherwise do nothing (for first boot)",
+    )
+    arguments = parser.parse_args(argv)
 
     from app.core.config import settings
 
@@ -252,13 +258,17 @@ def main() -> None:
             reset=arguments.reset,
         )
     except SeedRefusedError as error:
+        if arguments.if_empty:
+            print(f"Seed skipped: {error}")
+            return 0
         print(f"Seed refused: {error}", file=sys.stderr)
-        raise SystemExit(1) from error
+        return 1
     print(
         "Seeded "
         f"{summary.employee_count} employees and {summary.salary_record_count} salary records."
     )
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

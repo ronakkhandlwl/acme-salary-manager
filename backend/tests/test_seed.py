@@ -5,7 +5,13 @@ from sqlalchemy.orm import Session
 from app.db.base import Base
 from app.models.employee import Employee
 from app.models.salary_record import SalaryRecord
-from scripts.seed import REFERENCE_DATE, SeedRefusedError, generate_dataset, seed_database
+from scripts.seed import (
+    REFERENCE_DATE,
+    SeedRefusedError,
+    generate_dataset,
+    main,
+    seed_database,
+)
 
 
 @pytest.fixture
@@ -88,3 +94,11 @@ def test_salary_history_grows_to_a_level_appropriate_current_salary() -> None:
 
     # Entry level $72k up to Director (4x) with department and personal variation.
     assert 50_000 < min(usd_current) and max(usd_current) < 400_000
+
+
+def test_cli_if_empty_seeds_once_then_skips(seed_url: str, capsys) -> None:
+    assert main(["--database-url", seed_url, "--employee-count", "5", "--if-empty"]) == 0
+    assert main(["--database-url", seed_url, "--employee-count", "9", "--if-empty"]) == 0
+    assert "Seed skipped" in capsys.readouterr().out
+    assert _counts(seed_url)[0] == 5
+    assert main(["--database-url", seed_url, "--employee-count", "9"]) == 1

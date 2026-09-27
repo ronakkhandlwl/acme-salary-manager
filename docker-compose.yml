@@ -1,0 +1,29 @@
+# Production-like local stack: PostgreSQL + the single app container.
+#   docker compose up --build   →  http://localhost:8000
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: acme
+      POSTGRES_PASSWORD: acme-local-only
+      POSTGRES_DB: salary_manager
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U acme -d salary_manager"]
+      interval: 5s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://acme:acme-local-only@db:5432/salary_manager
+      SEED_ON_START: "true"
+    ports:
+      - "8000:8000"
+
+volumes:
+  db-data:
