@@ -1,0 +1,16 @@
+# Render Blueprint: free web service built from the root Dockerfile.
+# No DATABASE_URL is set, so the app uses SQLite inside the container and seeds
+# 10,000 fictional employees on start; edits reset when the service restarts.
+# Set DATABASE_URL (e.g. a free Neon PostgreSQL URL) to persist data.
+services:
+  - type: web
+    name: acme-salary-manager
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: SEED_ON_START
+        value: "true"
