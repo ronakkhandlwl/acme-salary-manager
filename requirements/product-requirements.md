@@ -17,7 +17,7 @@ An HR Manager can:
 
 1. Find an employee using name, employee number, email, country, department, status, and server-side sorting/pagination.
 2. View employee details, current salary, and a chronological salary history.
-3. Add a salary record with amount, currency, effective date, pay frequency, and change reason; previous records remain unchanged.
+3. Add a salary record with amount, currency, effective date, pay frequency, and change reason; previous records remain unchanged. Add a new hire together with their starting salary.
 4. Answer routine compensation questions through filtered analytics: active headcount, payroll totals by country and currency, average/median salary, salary bands, highest/lowest salaries, and recent changes.
 
 ## Functional scope
@@ -53,4 +53,4 @@ An HR Manager can:
 
 - Backend: Python/FastAPI; UI: React/TypeScript; local database: SQLite; deployment database: PostgreSQL.
 - V1 is evaluated as a single HR-admin workflow. Authentication is a deployment-hardening concern, not a substitute for the requested product flow.
-- Deployment hosting credentials will be supplied or deployment will be documented for a free-tier compatible host.
+- Delivered as one container (API + UI) deployable to any container host with PostgreSQL; hosting steps are documented in `docs/deployment.md`.
