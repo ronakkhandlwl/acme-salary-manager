@@ -1,15 +1,16 @@
-import os
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
+from app.core.config import settings
 from app.db.base import Base
 from app.models import Employee, SalaryRecord  # noqa: F401
 
 config = context.config
-if database_url := os.getenv("DATABASE_URL"):
-    config.set_main_option("sqlalchemy.url", database_url)
+# Explicit URLs (tests, perf script) win; otherwise use the app's DATABASE_URL setting.
+if config.get_main_option("sqlalchemy.url") in (None, "", "sqlite:///./acme_salary_manager.db"):
+    config.set_main_option("sqlalchemy.url", settings.sqlalchemy_database_url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

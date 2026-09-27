@@ -9,17 +9,21 @@ from app.api.employees import router as employees_router
 from app.core.config import settings
 from app.db.base import Base
 from app.db.session import build_engine
+from app.frontend import mount_frontend
 from app.models import Employee, SalaryRecord  # noqa: F401
 
 
 def create_app(
-    database_url: str | None = None, *, create_schema: bool = False
+    database_url: str | None = None,
+    *,
+    create_schema: bool = False,
+    frontend_dist_dir: str | None = None,
 ) -> FastAPI:
     """Create a configured API application for the supplied database."""
 
     @asynccontextmanager
     async def lifespan(application: FastAPI):
-        engine = build_engine(database_url or settings.database_url)
+        engine = build_engine(database_url or settings.sqlalchemy_database_url)
         application.state.engine = engine
         application.state.session_factory = sessionmaker(
             bind=engine, autoflush=False, expire_on_commit=False
@@ -44,6 +48,8 @@ def create_app(
     def health_check() -> dict[str, str]:
         return {"status": "ok"}
 
+    if frontend_dist_dir or settings.frontend_dist_dir:
+        mount_frontend(application, frontend_dist_dir or settings.frontend_dist_dir)
     return application
 
 
