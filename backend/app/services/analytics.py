@@ -1,8 +1,14 @@
+import logging
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import date
 from typing import Any
+from uuid import uuid4
 
-from sqlalchemy import Select, Subquery, and_, case, cast, func, or_, select
+from sqlalchemy import FromClause, Select, Table, and_, case, cast, func, or_, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, aliased
+from sqlalchemy.schema import DropTable
 from sqlalchemy.types import BigInteger
 
 from app.models.employee import Employee
@@ -21,6 +27,8 @@ from app.schemas.analytics import (
 from app.services.query_filters import employee_filter_clauses
 from app.services.salary_bands import plan_bands
 
+logger = logging.getLogger(__name__)
+
 ANNUALIZATION_NOTE = "Amounts are annualized (monthly pay × 12) and never summed across currencies."
 EXTREMES_PER_CURRENCY = 5
 RECENT_CHANGES_LIMIT = 15
@@ -30,13 +38,13 @@ def annualized_amount(amount_minor, pay_frequency):
     return case((pay_frequency == "monthly", amount_minor * 12), else_=amount_minor)
 
 
-def current_compensation_subquery(
+def current_compensation_select(
     as_of: date,
     *,
     country_code: str | None,
     department: str | None,
     employment_status: str | None,
-) -> Subquery:
+) -> Select[Any]:
     """One row per employee holding their salary in effect on ``as_of``.
 
     A record is current when no later-effective record exists for the same employee
@@ -91,10 +99,10 @@ def current_compensation_subquery(
     )
     if filters:
         statement = statement.where(*filters)
-    return statement.subquery()
+    return statement
 
 
-def _median_select(source: Subquery, *group_columns):
+def _median_select(source: FromClause, *group_columns):
     numbered = (
         select(
             *group_columns,
@@ -128,7 +136,7 @@ def _group_dict(row, group_columns) -> dict[str, object]:
     return {str(column.name): mapping[str(column.name)] for column in group_columns}
 
 
-def _money_aggregates(session: Session, source: Subquery, *group_columns) -> list[dict]:
+def _money_aggregates(session: Session, source: FromClause, *group_columns) -> list[dict]:
     median_rows = {
         _group_key(row, group_columns): row.median_minor
         for row in session.execute(_median_select(source, *group_columns))
@@ -155,7 +163,7 @@ def _money_aggregates(session: Session, source: Subquery, *group_columns) -> lis
     return results
 
 
-def _salary_bands(session: Session, source: Subquery) -> list[SalaryBand]:
+def _salary_bands(session: Session, source: FromClause) -> list[SalaryBand]:
     """Count employees per currency-specific band, including empty bands."""
     ranges = session.execute(
         select(
@@ -227,12 +235,51 @@ def compensation_summary(
     employment_status: str | None = "active",
 ) -> AnalyticsSummary:
     effective_date = as_of or date.today()
-    current = current_compensation_subquery(
+    current_select = current_compensation_select(
         effective_date,
         country_code=country_code,
         department=department,
         employment_status=employment_status,
     )
+    with _materialized(session, current_select) as current:
+        return _summarize(
+            session,
+            current,
+            effective_date,
+            country_code=country_code,
+            department=department,
+            employment_status=employment_status,
+        )
+
+
+@contextmanager
+def _materialized(session: Session, statement: Select[Any]) -> Iterator[Table]:
+    """Evaluate the current-salary set once into a connection-scoped temporary table.
+
+    The summary runs ~11 aggregate statements over the same set; materializing it
+    avoids re-running the anti-join for each one.
+    """
+    create = statement.into(f"current_compensation_{uuid4().hex[:12]}", temporary=True)
+    session.execute(create)
+    try:
+        yield create.table
+    finally:
+        try:
+            session.execute(DropTable(create.table))
+        except SQLAlchemyError:
+            # e.g. an aborted PostgreSQL transaction; rollback discards the table anyway.
+            logger.warning("could not drop %s", create.table.name, exc_info=True)
+
+
+def _summarize(
+    session: Session,
+    current: Table,
+    effective_date: date,
+    *,
+    country_code: str | None,
+    department: str | None,
+    employment_status: str | None,
+) -> AnalyticsSummary:
     headcount = session.scalar(select(func.count()).select_from(current)) or 0
     payroll_by_currency = [
         MoneyGroup(**row) for row in _money_aggregates(session, current, current.c.currency)

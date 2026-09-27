@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 
 from fastapi.testclient import TestClient
+from sqlalchemy import inspect
 
 from tests.conftest import create_employee
 
@@ -258,3 +259,18 @@ def test_same_day_correction_counts_employee_once_using_latest_entry(client: Tes
 
     assert body["headcount"] == 1
     assert body["payroll_by_currency"][0]["payroll_minor"] == 72_000_00
+
+
+def test_summary_does_not_leave_temporary_tables_behind(client: TestClient) -> None:
+    employee = _hire(client)
+    _add_salary(
+        client, employee["id"], amount_minor=70_000_00, currency="INR", effective_from="2024-01-01"
+    )
+    session_factory = client.app.state.session_factory
+
+    for _ in range(3):
+        assert client.get("/api/v1/analytics/summary").status_code == 200
+
+    with session_factory() as session:
+        temp_tables = inspect(session.connection()).get_temp_table_names()
+    assert not [name for name in temp_tables if name.startswith("current_compensation")]
