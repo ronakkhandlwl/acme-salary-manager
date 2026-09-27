@@ -76,7 +76,6 @@ EMPLOYMENT_STATUSES = (("active", 92), ("inactive", 5), ("terminated", 3))
 ANNUAL_RAISE_RANGE = (0.03, 0.09)
 PROMOTION_RAISE_RANGE = (0.12, 0.20)
 PROMOTION_PROBABILITY = 0.15
-MAX_SALARY_RECORDS = 4
 
 
 @dataclass(frozen=True)
@@ -105,14 +104,12 @@ def _round_to_hundred(amount: float) -> int:
 def _salary_history(
     generator: random.Random, employee_id: str, currency: str, hire_date: date, base: int
 ) -> list[dict]:
-    """One initial offer followed by up to three yearly reviews or promotions."""
+    """An initial offer, then a review or promotion every one or two years until today."""
     records = []
     amount = base
     effective = hire_date
-    for sequence in range(MAX_SALARY_RECORDS):
-        if effective > REFERENCE_DATE:
-            break
-        if sequence == 0:
+    while effective <= REFERENCE_DATE:
+        if not records:
             reason = "initial_offer"
         else:
             promoted = generator.random() < PROMOTION_PROBABILITY
