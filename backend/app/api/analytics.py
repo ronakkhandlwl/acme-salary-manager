@@ -22,7 +22,7 @@ def analytics_summary(
     session: SessionDependency,
     country_code: str | None = None,
     department: str | None = None,
-    employment_status: Literal["active", "inactive", "terminated"] | None = "active",
+    employment_status: Literal["active", "inactive", "terminated", "all"] = "active",
     as_of: date | None = None,
 ) -> AnalyticsSummary:
     return compensation_summary(
@@ -30,5 +30,5 @@ def analytics_summary(
         as_of=as_of,
         country_code=country_code,
         department=department,
-        employment_status=employment_status,
+        employment_status=None if employment_status == "all" else employment_status,
     )

@@ -14,6 +14,7 @@ from app.schemas.employees import (
 )
 from app.services.employees import (
     DuplicateEmployeeError,
+    InvalidSalaryRecordError,
     add_salary_record,
     create_employee,
     current_salary,
@@ -110,7 +111,7 @@ def add_salary_record_endpoint(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="employee not found")
     try:
         return add_salary_record(session, employee, payload)
-    except ValueError as error:
+    except InvalidSalaryRecordError as error:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(error)
         ) from error

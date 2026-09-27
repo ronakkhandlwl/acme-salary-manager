@@ -175,29 +175,62 @@ def test_salary_bands_and_extremes_stay_within_currency(client: TestClient) -> N
         first_name="UsdHigh",
     )
     _add_salary(
-        client, low["id"], amount_minor=50_000_00, currency="INR", effective_from="2024-01-01"
+        client, low["id"], amount_minor=500_000_00, currency="INR", effective_from="2024-01-01"
     )
     _add_salary(
-        client, high["id"], amount_minor=160_000_00, currency="INR", effective_from="2024-01-01"
+        client, high["id"], amount_minor=3_000_000_00, currency="INR", effective_from="2024-01-01"
     )
     _add_salary(
         client, usd["id"], amount_minor=200_000_00, currency="USD", effective_from="2024-01-01"
     )
 
     body = client.get("/api/v1/analytics/summary").json()
-    inr_bands = {
-        row["band_label"]: row["employee_count"]
-        for row in body["salary_bands"]
-        if row["currency"] == "INR"
-    }
+    inr_bands = [row for row in body["salary_bands"] if row["currency"] == "INR"]
+    usd_bands = [row for row in body["salary_bands"] if row["currency"] == "USD"]
     inr_extremes = next(row for row in body["extremes"] if row["currency"] == "INR")
     inr_people = inr_extremes["highest"] + inr_extremes["lowest"]
 
-    assert inr_bands["Under 60,000"] == 1
-    assert inr_bands["150,000+"] == 1
+    assert sum(band["employee_count"] for band in inr_bands) == 2
+    assert inr_bands[0]["lower_minor"] <= 500_000_00 < inr_bands[0]["upper_minor"]
+    assert inr_bands[-1]["lower_minor"] <= 3_000_000_00 < inr_bands[-1]["upper_minor"]
+    assert all(
+        earlier["upper_minor"] == later["lower_minor"]
+        for earlier, later in zip(inr_bands, inr_bands[1:], strict=False)
+    )
+    assert [band["employee_count"] for band in usd_bands] == [1]
     assert inr_extremes["highest"][0]["first_name"] == "High"
     assert inr_extremes["lowest"][0]["first_name"] == "Low"
     assert all(item["currency"] == "INR" for item in inr_people)
+
+
+def test_all_status_view_includes_every_employment_status(client: TestClient) -> None:
+    active = _hire(client)
+    leaver = _hire(
+        client,
+        employee_number="EMP-50002",
+        email="leaver@example.com",
+        employment_status="terminated",
+    )
+    for employee in (active, leaver):
+        _add_salary(
+            client,
+            employee["id"],
+            amount_minor=90_000_00,
+            currency="INR",
+            effective_from="2024-01-01",
+        )
+
+    body = client.get("/api/v1/analytics/summary", params={"employment_status": "all"}).json()
+
+    assert body["headcount"] == 2
+
+
+def test_empty_workforce_returns_empty_aggregates(client: TestClient) -> None:
+    body = client.get("/api/v1/analytics/summary", params={"country_code": "ZZ"}).json()
+
+    assert body["headcount"] == 0
+    assert body["payroll_by_currency"] == []
+    assert body["salary_bands"] == []
 
 
 def test_recent_changes_and_filter_options(client: TestClient) -> None:
@@ -212,3 +245,16 @@ def test_recent_changes_and_filter_options(client: TestClient) -> None:
     assert changes[0]["employee_number"] == "EMP-10001"
     assert "IN" in options["countries"]
     assert "Finance" in options["departments"]
+
+
+def test_same_day_correction_counts_employee_once_using_latest_entry(client: TestClient) -> None:
+    employee = _hire(client)
+    for amount in (70_000_00, 72_000_00):
+        _add_salary(
+            client, employee["id"], amount_minor=amount, currency="INR", effective_from="2024-01-01"
+        )
+
+    body = client.get("/api/v1/analytics/summary").json()
+
+    assert body["headcount"] == 1
+    assert body["payroll_by_currency"][0]["payroll_minor"] == 72_000_00

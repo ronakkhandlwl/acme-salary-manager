@@ -1,14 +1,34 @@
+import os
 from collections.abc import Generator
 
 import pytest
 from fastapi.testclient import TestClient
 
+from app.db.base import Base
+from app.db.session import build_engine
 from app.main import create_app
+
+# CI also runs the suite against PostgreSQL by setting TEST_DATABASE_URL; locally each
+# test gets an isolated throwaway SQLite file.
+EXTERNAL_TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 
 
 @pytest.fixture
-def client(tmp_path) -> Generator[TestClient, None, None]:
-    database_url = f"sqlite:///{tmp_path / 'test.db'}"
+def database_url(tmp_path) -> Generator[str, None, None]:
+    if not EXTERNAL_TEST_DATABASE_URL:
+        yield f"sqlite:///{tmp_path / 'test.db'}"
+        return
+    engine = build_engine(EXTERNAL_TEST_DATABASE_URL)
+    Base.metadata.drop_all(engine)
+    engine.dispose()
+    yield EXTERNAL_TEST_DATABASE_URL
+    engine = build_engine(EXTERNAL_TEST_DATABASE_URL)
+    Base.metadata.drop_all(engine)
+    engine.dispose()
+
+
+@pytest.fixture
+def client(database_url: str) -> Generator[TestClient, None, None]:
     application = create_app(database_url=database_url, create_schema=True)
     with TestClient(application) as test_client:
         yield test_client

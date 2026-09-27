@@ -1,3 +1,6 @@
+from datetime import date, timedelta
+
+import pytest
 from fastapi.testclient import TestClient
 
 from tests.conftest import create_employee
@@ -110,3 +113,130 @@ def test_rejects_non_positive_salary_amount(
     )
 
     assert response.status_code == 422
+
+
+def _salary_payload(**overrides: object) -> dict[str, object]:
+    return {
+        "amount_minor": 95_000_00,
+        "currency": "INR",
+        "pay_frequency": "annual",
+        "effective_from": "2024-04-01",
+        "change_reason": "annual_review",
+        **overrides,
+    }
+
+
+def test_rejects_duplicate_employee_number(
+    client: TestClient, employee_payload: dict[str, str]
+) -> None:
+    create_employee(client, employee_payload)
+
+    response = client.post(
+        "/api/v1/employees", json={**employee_payload, "email": "another@example.com"}
+    )
+
+    assert response.status_code == 409
+
+
+def test_returns_404_for_unknown_employee(client: TestClient) -> None:
+    assert client.get("/api/v1/employees/does-not-exist").status_code == 404
+    response = client.post(
+        "/api/v1/employees/does-not-exist/salary-records", json=_salary_payload()
+    )
+    assert response.status_code == 404
+
+
+def test_salary_change_is_appended_and_becomes_current(
+    client: TestClient, employee_payload: dict[str, str]
+) -> None:
+    employee = create_employee(client, employee_payload)
+    url = f"/api/v1/employees/{employee['id']}/salary-records"
+    client.post(url, json=_salary_payload(amount_minor=80_000_00, effective_from="2023-04-01"))
+    client.post(url, json=_salary_payload(amount_minor=95_000_00, change_reason="promotion"))
+
+    detail = client.get(f"/api/v1/employees/{employee['id']}").json()
+
+    assert detail["current_salary"]["amount_minor"] == 95_000_00
+    assert [record["amount_minor"] for record in detail["salary_history"]] == [
+        95_000_00,
+        80_000_00,
+    ]
+
+
+def test_future_dated_salary_is_recorded_but_not_yet_current(
+    client: TestClient, employee_payload: dict[str, str]
+) -> None:
+    employee = create_employee(client, employee_payload)
+    url = f"/api/v1/employees/{employee['id']}/salary-records"
+    client.post(url, json=_salary_payload(amount_minor=80_000_00))
+    future = (date.today() + timedelta(days=60)).isoformat()
+    response = client.post(url, json=_salary_payload(amount_minor=99_000_00, effective_from=future))
+
+    detail = client.get(f"/api/v1/employees/{employee['id']}").json()
+
+    assert response.status_code == 201
+    assert detail["current_salary"]["amount_minor"] == 80_000_00
+    assert len(detail["salary_history"]) == 2
+
+
+def test_rejects_salary_effective_more_than_a_year_ahead(
+    client: TestClient, employee_payload: dict[str, str]
+) -> None:
+    employee = create_employee(client, employee_payload)
+    far_future = (date.today() + timedelta(days=400)).isoformat()
+
+    response = client.post(
+        f"/api/v1/employees/{employee['id']}/salary-records",
+        json=_salary_payload(effective_from=far_future),
+    )
+
+    assert response.status_code == 422
+    assert "future" in response.json()["detail"]
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"currency": "US"},
+        {"currency": "12$"},
+        {"change_reason": "because"},
+        {"pay_frequency": "weekly"},
+        {"amount_minor": 12.5},
+    ],
+)
+def test_rejects_malformed_salary_input(
+    client: TestClient, employee_payload: dict[str, str], overrides: dict[str, object]
+) -> None:
+    employee = create_employee(client, employee_payload)
+
+    response = client.post(
+        f"/api/v1/employees/{employee['id']}/salary-records", json=_salary_payload(**overrides)
+    )
+
+    assert response.status_code == 422
+
+
+def test_normalizes_currency_and_country_codes(
+    client: TestClient, employee_payload: dict[str, str]
+) -> None:
+    employee = create_employee(client, {**employee_payload, "country_code": "in"})
+    record = client.post(
+        f"/api/v1/employees/{employee['id']}/salary-records", json=_salary_payload(currency="inr")
+    ).json()
+
+    assert employee["country_code"] == "IN"
+    assert record["currency"] == "INR"
+
+
+def test_sorts_directory_descending(client: TestClient, employee_payload: dict[str, str]) -> None:
+    create_employee(client, employee_payload)
+    create_employee(
+        client,
+        {**employee_payload, "employee_number": "EMP-00002", "email": "b@example.com"},
+    )
+
+    body = client.get(
+        "/api/v1/employees", params={"sort_by": "employee_number", "sort_direction": "desc"}
+    ).json()
+
+    assert [item["employee_number"] for item in body["items"]] == ["EMP-00002", "EMP-00001"]

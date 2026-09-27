@@ -20,8 +20,11 @@ class DepartmentPayroll(MoneyGroup):
 
 
 class SalaryBand(BaseModel):
+    """Employees whose annual salary is >= lower_minor and < upper_minor."""
+
     currency: str
-    band_label: str
+    lower_minor: int
+    upper_minor: int
     employee_count: int
 
 

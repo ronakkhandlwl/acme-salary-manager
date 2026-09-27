@@ -3,16 +3,27 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
+EmploymentStatus = Literal["active", "inactive", "terminated"]
+PayFrequency = Literal["monthly", "annual"]
+ChangeReason = Literal[
+    "initial_offer",
+    "annual_review",
+    "promotion",
+    "market_adjustment",
+    "role_change",
+    "correction",
+]
+
 
 class EmployeeCreate(BaseModel):
     employee_number: str = Field(min_length=1, max_length=32)
     first_name: str = Field(min_length=1, max_length=100)
     last_name: str = Field(min_length=1, max_length=100)
     email: EmailStr
-    country_code: str = Field(min_length=2, max_length=2)
+    country_code: str = Field(pattern=r"^[A-Za-z]{2}$")
     department: str = Field(min_length=1, max_length=100)
     title: str = Field(min_length=1, max_length=150)
-    employment_status: Literal["active", "inactive", "terminated"] = "active"
+    employment_status: EmploymentStatus = "active"
     hire_date: date
 
     @field_validator("country_code")
@@ -23,10 +34,10 @@ class EmployeeCreate(BaseModel):
 
 class SalaryRecordCreate(BaseModel):
     amount_minor: int = Field(gt=0)
-    currency: str = Field(min_length=3, max_length=3)
-    pay_frequency: Literal["monthly", "annual"]
+    currency: str = Field(pattern=r"^[A-Za-z]{3}$")
+    pay_frequency: PayFrequency
     effective_from: date
-    change_reason: str = Field(min_length=1, max_length=100)
+    change_reason: ChangeReason
 
     @field_validator("currency")
     @classmethod

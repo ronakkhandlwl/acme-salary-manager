@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from sqlalchemy import Select, func, or_, select
 from sqlalchemy.exc import IntegrityError
@@ -9,9 +9,16 @@ from app.models.salary_record import SalaryRecord
 from app.schemas.employees import EmployeeCreate, SalaryRecordCreate
 from app.services.query_filters import employee_filter_clauses
 
+# Salary changes may be scheduled ahead of time, but not arbitrarily far into the future.
+MAX_FUTURE_EFFECTIVE_DAYS = 366
+
 
 class DuplicateEmployeeError(Exception):
     """Raised when a unique employee identifier already exists."""
+
+
+class InvalidSalaryRecordError(Exception):
+    """Raised when a salary record violates a compensation business rule."""
 
 
 def create_employee(session: Session, payload: EmployeeCreate) -> Employee:
@@ -87,10 +94,22 @@ def list_employees(
 
 
 def add_salary_record(
-    session: Session, employee: Employee, payload: SalaryRecordCreate
+    session: Session,
+    employee: Employee,
+    payload: SalaryRecordCreate,
+    *,
+    today: date | None = None,
 ) -> SalaryRecord:
+    """Append a salary record; existing records are never modified."""
+    reference_date = today or date.today()
     if payload.effective_from < employee.hire_date:
-        raise ValueError("salary effective date cannot be before the employee hire date")
+        raise InvalidSalaryRecordError(
+            "salary effective date cannot be before the employee hire date"
+        )
+    if payload.effective_from > reference_date + timedelta(days=MAX_FUTURE_EFFECTIVE_DAYS):
+        raise InvalidSalaryRecordError(
+            "salary effective date cannot be more than one year in the future"
+        )
     record = SalaryRecord(employee_id=employee.id, **payload.model_dump())
     session.add(record)
     session.commit()
@@ -103,14 +122,13 @@ def current_salary(employee: Employee, as_of: date | None = None) -> SalaryRecor
     eligible = (
         record for record in employee.salary_records if record.effective_from <= effective_date
     )
+    # Mirrors the SQL rule in analytics: latest effective date, then insertion time, then id.
     return max(
         eligible,
-        key=lambda record: (record.effective_from, record.created_at or datetime_min()),
+        key=lambda record: (
+            record.effective_from,
+            record.created_at.timestamp() if record.created_at else 0.0,
+            record.id,
+        ),
         default=None,
     )
-
-
-def datetime_min():
-    from datetime import datetime
-
-    return datetime.min
