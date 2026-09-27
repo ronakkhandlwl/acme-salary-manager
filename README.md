@@ -68,7 +68,7 @@ npm run dev                                     # http://localhost:5173, proxies
 | Suite | Command | Current result |
 |---|---|---|
 | Backend lint | `cd backend && .venv/bin/ruff check . && .venv/bin/ruff format --check .` | clean |
-| Backend tests (SQLite) | `cd backend && .venv/bin/pytest` | 56 tests, 99% coverage |
+| Backend tests (SQLite) | `cd backend && .venv/bin/pytest` | 56 tests, 98% coverage (CI gate: 90%) |
 | Backend tests (PostgreSQL) | `TEST_DATABASE_URL=postgresql+psycopg://… .venv/bin/pytest` | 56 tests |
 | Frontend lint + types | `cd frontend && npm run lint && npm run typecheck` | clean |
 | Frontend tests | `cd frontend && npm run test:coverage` | 60 tests, 92% lines |
