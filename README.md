@@ -4,7 +4,8 @@ A web application that replaces ACME's salary spreadsheets: HR can find any of 1
 employees, keep a trustworthy salary history, record changes safely, and answer "how do we
 pay people?" with per-currency analytics.
 
-**Demo video:** [docs/demo/salary-manager-walkthrough.mp4](docs/demo/salary-manager-walkthrough.mp4)
+**Live app:** https://acme-salary-manager-qwpj.onrender.com (free tier: the first request after idle can take ~1 minute to wake)
+· **Demo video:** [docs/demo/salary-manager-walkthrough.mp4](docs/demo/salary-manager-walkthrough.mp4)
 · **Requirements:** [one-page PRD](requirements/product-requirements.md)
 
 | Dashboard | Profile & salary change |
@@ -109,5 +110,6 @@ See [docs/decisions.md](docs/decisions.md) for the full list.
 
 ## Deployment
 
-One container serves API + UI; see [docs/deployment.md](docs/deployment.md). A hosted
-instance has not been published yet.
+Live on Render's free tier from `render.yaml`: https://acme-salary-manager-qwpj.onrender.com (API docs at `/docs`).
+The demo uses SQLite inside the container and reseeds on restart, so edits are temporary;
+set `DATABASE_URL` to a PostgreSQL URL to persist data. See [docs/deployment.md](docs/deployment.md).

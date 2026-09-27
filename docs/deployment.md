@@ -26,6 +26,12 @@ docker compose up --build
 # http://localhost:8000
 ```
 
+## Render (free, one click)
+
+`render.yaml` defines a free Docker web service. In the Render dashboard: New → Blueprint →
+select this repository → Deploy Blueprint. Add a `DATABASE_URL` environment variable (for
+example a free Neon PostgreSQL database) if data should survive restarts.
+
 ## Any container platform (Railway, Render, Fly.io, Cloud Run, …)
 
 1. Create a PostgreSQL database and copy its connection URL.
@@ -48,7 +54,13 @@ railway domain --service app
 - The image layout (`pip install .`, migrations, first-boot seed, UI + API served on
   `$PORT`, idempotent restart) was exercised locally against PostgreSQL by running the
   entrypoint in an equivalent Python 3.12 environment. CI builds the image on every push.
-- A hosted deployment has not been created yet (decision: deploy later).
+- Live demo: https://acme-salary-manager-qwpj.onrender.com, deployed from `render.yaml` (Render free web service,
+  Docker runtime). It runs without `DATABASE_URL`, so it uses SQLite in the container and
+  reseeds 10,000 fictional employees whenever the instance restarts; edits are temporary by
+  design. Free instances sleep after ~15 minutes idle and take up to a minute to wake.
+- Verified after deploy: all 4 Playwright E2E journeys pass against the live URL
+  (`E2E_BASE_URL=<url> npm run test:e2e`). The analytics summary takes ~3 s there versus
+  ~0.15 s locally, because the free instance has only a fraction of a CPU.
 
 ## Resetting demo data
 
