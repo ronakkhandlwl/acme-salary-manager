@@ -1,6 +1,9 @@
 import { lazy } from 'react'
 
 // Route-level code splitting keeps the charting library out of the directory bundle.
+export const DashboardPage = lazy(() =>
+  import('../features/analytics/DashboardPage').then((module) => ({ default: module.DashboardPage })),
+)
 export const EmployeeDirectoryPage = lazy(() =>
   import('../features/employees/EmployeeDirectoryPage').then((module) => ({
     default: module.EmployeeDirectoryPage,
