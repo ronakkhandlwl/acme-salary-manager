@@ -16,6 +16,7 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
     globals: true,
+    testTimeout: 20_000, // CI runners with coverage instrumentation are several times slower
     restoreMocks: true,
     coverage: {
       provider: 'v8',
